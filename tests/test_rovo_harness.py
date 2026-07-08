@@ -5,11 +5,11 @@ from __future__ import annotations
 import os
 from unittest.mock import patch
 
+from omnigent.community.harness.rovo.inner.rovo_executor import RovoExecutor
 from omnigent.community.harness.rovo.inner.rovo_harness import (
     _build_rovo_executor,
     create_app,
 )
-from omnigent.community.harness.rovo.inner.rovo_executor import RovoExecutor
 
 
 class TestBuildRovoExecutor:

@@ -22,14 +22,14 @@ import contextlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeAlias
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # ACP protocol version this client implements.
 ACP_PROTOCOL_VERSION = 1
 
-JsonObj: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
+type JsonObj = dict[str, Any]  # type: ignore[explicit-any]
 
 # Callback invoked for each ``session/update`` notification's ``update`` payload.
 UpdateHandler = Callable[[JsonObj], Awaitable[None]]

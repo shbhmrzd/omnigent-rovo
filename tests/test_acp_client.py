@@ -18,10 +18,10 @@ from omnigent.community.harness.rovo.inner.rovo_acp import (
     default_acp_command,
 )
 
-
 # ---------------------------------------------------------------------------
 # default_acp_command
 # ---------------------------------------------------------------------------
+
 
 class TestDefaultAcpCommand:
     def test_bare_defaults(self) -> None:
@@ -59,6 +59,7 @@ class TestDefaultAcpCommand:
 # ---------------------------------------------------------------------------
 # _auto_allow_permission
 # ---------------------------------------------------------------------------
+
 
 class TestAutoAllowPermission:
     def test_no_options(self) -> None:
@@ -114,15 +115,14 @@ class TestAutoAllowPermission:
         assert result["outcome"]["optionId"] == "whatever-1"
 
     def test_skips_options_without_option_id(self) -> None:
-        result = _auto_allow_permission(
-            {"options": [{"kind": "allow_once"}]}
-        )
+        result = _auto_allow_permission({"options": [{"kind": "allow_once"}]})
         assert result == {"outcome": {"outcome": "selected"}}
 
 
 # ---------------------------------------------------------------------------
 # _format_rpc_error
 # ---------------------------------------------------------------------------
+
 
 class TestFormatRpcError:
     def test_dict_with_code_and_message(self) -> None:
@@ -146,6 +146,7 @@ class TestFormatRpcError:
 # ---------------------------------------------------------------------------
 # AcpClient — unit tests with a mocked subprocess
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_proc(
     stdout_lines: list[str] | None = None,
@@ -177,7 +178,6 @@ def _make_mock_proc(
 
 
 class TestAcpClientLifecycle:
-
     @pytest.mark.asyncio
     async def test_start_spawns_subprocess(self) -> None:
         proc = _make_mock_proc()
@@ -205,7 +205,6 @@ class TestAcpClientLifecycle:
 
 
 class TestAcpClientDispatch:
-
     @pytest.mark.asyncio
     async def test_dispatch_response_resolves_future(self) -> None:
         client = AcpClient(command=["echo"])
@@ -234,10 +233,15 @@ class TestAcpClientDispatch:
             received.append(update)
 
         client._update_handlers["sess-1"] = handler
-        await client._dispatch({
-            "method": "session/update",
-            "params": {"sessionId": "sess-1", "update": {"sessionUpdate": "agent_message_chunk"}},
-        })
+        await client._dispatch(
+            {
+                "method": "session/update",
+                "params": {
+                    "sessionId": "sess-1",
+                    "update": {"sessionUpdate": "agent_message_chunk"},
+                },
+            }
+        )
         assert len(received) == 1
         assert received[0]["sessionUpdate"] == "agent_message_chunk"
 
@@ -248,15 +252,17 @@ class TestAcpClientDispatch:
         proc = _make_mock_proc()
         client._proc = proc
 
-        await client._dispatch({
-            "id": 99,
-            "method": "session/request_permission",
-            "params": {
-                "options": [
-                    {"optionId": "allow-1", "kind": "allow_once"},
-                ]
-            },
-        })
+        await client._dispatch(
+            {
+                "id": 99,
+                "method": "session/request_permission",
+                "params": {
+                    "options": [
+                        {"optionId": "allow-1", "kind": "allow_once"},
+                    ]
+                },
+            }
+        )
         # Verify it wrote a response
         proc.stdin.write.assert_called()
         written = proc.stdin.write.call_args[0][0].decode()
@@ -277,11 +283,13 @@ class TestAcpClientDispatch:
         proc = _make_mock_proc()
         client._proc = proc
 
-        await client._dispatch({
-            "id": 42,
-            "method": "custom/method",
-            "params": {"key": "value"},
-        })
+        await client._dispatch(
+            {
+                "id": 42,
+                "method": "custom/method",
+                "params": {"key": "value"},
+            }
+        )
         assert handler_called
         written = proc.stdin.write.call_args[0][0].decode()
         response = json.loads(written)
