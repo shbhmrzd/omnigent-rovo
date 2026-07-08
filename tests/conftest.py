@@ -11,9 +11,8 @@ import os
 import sys
 import types
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -89,7 +88,7 @@ class ToolCallRequest(ExecutorEvent):
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class ToolCallStatus(str, Enum):
+class ToolCallStatus(StrEnum):
     SUCCESS = "success"
     ERROR = "error"
 

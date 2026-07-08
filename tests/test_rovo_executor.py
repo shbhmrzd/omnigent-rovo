@@ -16,8 +16,6 @@ from omnigent.community.harness.rovo.inner.rovo_executor import (
     _to_acp_prompt,
     _translate_update,
 )
-
-# Re-import stub types so we can reference them directly
 from tests.conftest import (
     ExecutorError,
     ReasoningChunk,
