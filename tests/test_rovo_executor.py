@@ -375,9 +375,7 @@ class TestRovoExecutorRunTurn:
         mock_client = AsyncMock()
         mock_client.start = AsyncMock()
         mock_client.initialize = AsyncMock(return_value={})
-        mock_client.session_new = AsyncMock(
-            return_value={"sessionId": "s1", "models": {}}
-        )
+        mock_client.session_new = AsyncMock(return_value={"sessionId": "s1", "models": {}})
 
         # session_prompt should push updates via the on_update callback, then return
         async def fake_prompt(session_id, prompt, *, on_update, timeout):
@@ -478,9 +476,7 @@ class TestRovoExecutorRunTurn:
         mock_client = AsyncMock()
         mock_client.start = AsyncMock()
         mock_client.initialize = AsyncMock(return_value={})
-        mock_client.session_new = AsyncMock(
-            return_value={"sessionId": "s1", "models": {}}
-        )
+        mock_client.session_new = AsyncMock(return_value={"sessionId": "s1", "models": {}})
 
         async def fake_prompt(session_id, prompt, *, on_update, timeout):
             captured_prompts.append(prompt)

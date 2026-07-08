@@ -147,6 +147,7 @@ class Executor:
 
 # -- omnigent.harness_install_spec ------------------------------------------
 
+
 @dataclass
 class HarnessInstallSpec:
     display: str = ""
@@ -160,6 +161,7 @@ class HarnessInstallSpec:
 
 
 # -- omnigent.harness_plugins -----------------------------------------------
+
 
 @dataclass
 class HarnessContribution:
@@ -179,6 +181,7 @@ class HarnessContribution:
 
 # -- omnigent.runtime.harnesses._executor_adapter --------------------------
 
+
 class ExecutorAdapter:
     """Minimal stub — only needs to accept ``executor_factory``."""
 
@@ -187,6 +190,7 @@ class ExecutorAdapter:
 
     def build(self):
         from unittest.mock import MagicMock
+
         return MagicMock(name="FastAPI-stub")
 
 
@@ -194,33 +198,45 @@ class ExecutorAdapter:
 # Register all stubs in sys.modules BEFORE any test imports the plugin code.
 # ---------------------------------------------------------------------------
 
-_ensure_module("omnigent.inner.executor", {
-    "EnqueuedContent": EnqueuedContent,
-    "Executor": Executor,
-    "ExecutorConfig": ExecutorConfig,
-    "ExecutorError": ExecutorError,
-    "ExecutorEvent": ExecutorEvent,
-    "Message": Message,
-    "ReasoningChunk": ReasoningChunk,
-    "TextChunk": TextChunk,
-    "ToolCallComplete": ToolCallComplete,
-    "ToolCallRequest": ToolCallRequest,
-    "ToolCallStatus": ToolCallStatus,
-    "ToolSpec": ToolSpec,
-    "TurnComplete": TurnComplete,
-})
+_ensure_module(
+    "omnigent.inner.executor",
+    {
+        "EnqueuedContent": EnqueuedContent,
+        "Executor": Executor,
+        "ExecutorConfig": ExecutorConfig,
+        "ExecutorError": ExecutorError,
+        "ExecutorEvent": ExecutorEvent,
+        "Message": Message,
+        "ReasoningChunk": ReasoningChunk,
+        "TextChunk": TextChunk,
+        "ToolCallComplete": ToolCallComplete,
+        "ToolCallRequest": ToolCallRequest,
+        "ToolCallStatus": ToolCallStatus,
+        "ToolSpec": ToolSpec,
+        "TurnComplete": TurnComplete,
+    },
+)
 
-_ensure_module("omnigent.harness_install_spec", {
-    "HarnessInstallSpec": HarnessInstallSpec,
-})
+_ensure_module(
+    "omnigent.harness_install_spec",
+    {
+        "HarnessInstallSpec": HarnessInstallSpec,
+    },
+)
 
-_ensure_module("omnigent.harness_plugins", {
-    "HarnessContribution": HarnessContribution,
-})
+_ensure_module(
+    "omnigent.harness_plugins",
+    {
+        "HarnessContribution": HarnessContribution,
+    },
+)
 
-_ensure_module("omnigent.runtime.harnesses._executor_adapter", {
-    "ExecutorAdapter": ExecutorAdapter,
-})
+_ensure_module(
+    "omnigent.runtime.harnesses._executor_adapter",
+    {
+        "ExecutorAdapter": ExecutorAdapter,
+    },
+)
 
 # Also ensure intermediate namespace packages exist.
 _ensure_module("omnigent.runtime")
