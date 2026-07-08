@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,7 +19,6 @@ from omnigent.community.harness.rovo.inner.rovo_executor import (
 
 # Re-import stub types so we can reference them directly
 from tests.conftest import (
-    ExecutorConfig,
     ExecutorError,
     ReasoningChunk,
     TextChunk,
@@ -387,7 +385,10 @@ class TestRovoExecutorRunTurn:
         # session_prompt should push updates via the on_update callback, then return
         async def fake_prompt(session_id, prompt, *, on_update, timeout):
             await on_update(
-                {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "Hello!"}}
+                {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"type": "text", "text": "Hello!"},
+                }
             )
             return "end_turn"
 
