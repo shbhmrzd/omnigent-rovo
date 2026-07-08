@@ -29,13 +29,18 @@ dependencies = [
 Homepage = "https://github.com/shbhmrzd/omnigent-rovo"
 Repository = "https://github.com/shbhmrzd/omnigent-rovo"
 
-[project.entry-points."omnigent.community.harnesses"]
-rovo = "omnigent.community.harnesses.rovo.plugin:get_contribution"
+[project.entry-points."omnigent.community.harness"]
+rovo = "omnigent.community.harness.rovo.plugin:get_contribution"
 
 # -- tool config -----------------------------------------------------------
 
 [tool.hatch.build.targets.wheel]
 packages = ["omnigent"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
