@@ -7,6 +7,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from omnigent.community.harness.rovo.inner.rovo_acp import (
     ACP_PROTOCOL_VERSION,
     AcpClient,
@@ -16,7 +17,6 @@ from omnigent.community.harness.rovo.inner.rovo_acp import (
     _format_rpc_error,
     default_acp_command,
 )
-
 
 # ---------------------------------------------------------------------------
 # default_acp_command
