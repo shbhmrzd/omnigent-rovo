@@ -23,6 +23,30 @@ Once installed, Omnigent automatically discovers the plugin and makes `rovo` ava
 harness: rovo
 ```
 
+## Verifying the installation
+
+After installing both packages, confirm the plugin is detected:
+
+```bash
+python -c "
+from omnigent.harness_plugins import plugin_state, harness_aliases, harness_labels
+state = plugin_state()
+print('Contributions:', [c.name for c in state.contributions])
+print('rovo alias:', harness_aliases().get('rovo'))
+print('Label:', harness_labels().get('rovo-cli'))
+"
+```
+
+Expected output:
+
+```
+Contributions: ['omnigent', 'omnigent-rovo']
+rovo alias: rovo-cli
+Label: Rovo Dev
+```
+
+If `omnigent-rovo` does not appear in the list, make sure both packages are installed in the same Python environment.
+
 ## Prerequisites
 
 1. **Rovo Dev subscription** — Rovo Dev CLI requires a paid [Rovo Dev Standard](https://www.atlassian.com/software/rovo-dev) subscription (not available during trial)

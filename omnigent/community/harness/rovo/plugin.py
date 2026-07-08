@@ -5,8 +5,8 @@ plugin registry calls to discover the ``rovo-cli`` harness.
 
 Entry point registration (in ``pyproject.toml``)::
 
-    [project.entry-points."omnigent.community.harnesses"]
-    rovo = "omnigent.community.harnesses.rovo.plugin:get_contribution"
+    [project.entry-points."omnigent.community.harness"]
+    rovo = "omnigent.community.harness.rovo.plugin:get_contribution"
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ def get_contribution() -> HarnessContribution:
     :class:`HarnessContribution` tells the registry:
 
     - ``rovo-cli`` is a valid harness backed by the module at
-      ``omnigent.community.harnesses.rovo.inner.rovo_harness``
+      ``omnigent.community.harness.rovo.inner.rovo_harness``
     - ``rovo`` is a user-facing alias for ``rovo-cli``
     - ``HARNESS_ROVO_MODEL`` is the env var for model overrides
     - Install/auth metadata so ``omnigent setup`` can guide users
@@ -31,7 +31,7 @@ def get_contribution() -> HarnessContribution:
         name="omnigent-rovo",
         valid_harnesses=frozenset({"rovo-cli"}),
         harness_modules={
-            "rovo-cli": "omnigent.community.harnesses.rovo.inner.rovo_harness",
+            "rovo-cli": "omnigent.community.harness.rovo.inner.rovo_harness",
         },
         aliases={"rovo": "rovo-cli"},
         native_harnesses=frozenset(),  # rovo is not a tmux-native harness
