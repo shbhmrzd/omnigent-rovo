@@ -53,6 +53,6 @@ class TestBuildRovoExecutor:
 class TestCreateApp:
     def test_returns_app(self) -> None:
         app = create_app()
-        # The stub ExecutorAdapter.build() returns a MagicMock, so just
-        # verify create_app() runs without error and returns something.
-        assert app is not None
+        from fastapi import FastAPI
+
+        assert isinstance(app, FastAPI)

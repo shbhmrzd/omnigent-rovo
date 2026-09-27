@@ -1,6 +1,6 @@
 """Minimal ACP (Agent Client Protocol) client over an asyncio subprocess.
 
-This module drives ``acli rovodev acp`` — Rovo Dev's ACP server mode — over
+This module drives ``rovo acp`` — Rovo Dev's ACP server mode — over
 stdio using JSON-RPC 2.0. It is intentionally thin: it knows how to perform the
 ACP handshake (``initialize``), open a session (``session/new``), send a prompt
 (``session/prompt``), cancel a turn (``session/cancel``), and surface the
@@ -38,6 +38,8 @@ UpdateHandler = Callable[[JsonObj], Awaitable[None]]
 RequestHandler = Callable[[str, JsonObj], Awaitable[JsonObj]]
 
 _DEFAULT_TURN_TIMEOUT_SECONDS = 600.0
+# Tool output and file content can exceed asyncio's default 64 KiB line limit.
+_MAX_FRAME_BYTES = 8 * 1024 * 1024
 
 
 class AcpError(RuntimeError):
@@ -50,12 +52,15 @@ class AcpProcessExited(AcpError):
 
 def default_acp_command(
     *,
+    rovo_path: str | None = None,
     acli_path: str | None = None,
     config_file: str | None = None,
     site_url: str | None = None,
 ) -> list[str]:
-    """Build the ``acli rovodev acp`` command line."""
-    cmd = [acli_path or "acli", "rovodev", "acp"]
+    """Build ``rovo acp``, or explicitly opt into the older acli launcher."""
+    if rovo_path and acli_path:
+        raise ValueError("Cannot configure both rovo_path and acli_path")
+    cmd = [acli_path, "rovodev", "acp"] if acli_path else [rovo_path or "rovo", "acp"]
     if config_file:
         cmd += ["--config-file", config_file]
     if site_url:
@@ -112,6 +117,7 @@ class AcpClient:
             stderr=asyncio.subprocess.PIPE,
             env=self._env,
             cwd=self._cwd,
+            limit=_MAX_FRAME_BYTES,
         )
         self._reader_task = asyncio.create_task(self._reader_loop())
         self._stderr_task = asyncio.create_task(self._stderr_loop())
@@ -132,6 +138,7 @@ class AcpClient:
             if proc.returncode is None:
                 with contextlib.suppress(ProcessLookupError, OSError):
                     proc.kill()
+                await proc.wait()
         for task in (self._reader_task, self._stderr_task):
             if task is not None:
                 task.cancel()
@@ -146,8 +153,10 @@ class AcpClient:
             raise AcpProcessExited("ACP subprocess not started")
         line = json.dumps(payload) + "\n"
         proc.stdin.write(line.encode("utf-8"))
-        with contextlib.suppress(ConnectionResetError, BrokenPipeError):
+        try:
             await proc.stdin.drain()
+        except (ConnectionResetError, BrokenPipeError) as exc:
+            raise AcpProcessExited("ACP subprocess stdin closed") from exc
 
     async def request(self, method: str, params: JsonObj | None = None) -> JsonObj:
         """Send a JSON-RPC request and await its result."""
@@ -160,8 +169,15 @@ class AcpClient:
         msg: JsonObj = {"jsonrpc": "2.0", "id": request_id, "method": method}
         if params is not None:
             msg["params"] = params
-        await self._write(msg)
-        return await fut
+        try:
+            await self._write(msg)
+            return await fut
+        finally:
+            self._pending.pop(request_id, None)
+            if not fut.done():
+                fut.cancel()
+            elif not fut.cancelled():
+                fut.exception()  # Retrieve errors even when the write failed first.
 
     async def notify(self, method: str, params: JsonObj | None = None) -> None:
         """Send a JSON-RPC notification (no response expected)."""
@@ -214,6 +230,9 @@ class AcpClient:
                 ),
                 timeout=timeout,
             )
+        except (TimeoutError, asyncio.CancelledError):
+            await self.session_cancel(session_id)
+            raise
         finally:
             self._update_handlers.pop(session_id, None)
         stop_reason = result.get("stopReason")
@@ -251,6 +270,7 @@ class AcpClient:
         except Exception:
             logger.exception("rovo-acp: reader loop error")
         finally:
+            self._closed = True
             self._fail_pending(AcpProcessExited("ACP subprocess stdout closed"))
 
     async def _dispatch(self, msg: JsonObj) -> None:
@@ -260,7 +280,7 @@ class AcpClient:
 
         # 1) Response to one of our requests (has id, no method).
         if msg_id is not None and method is None:
-            fut = self._pending.pop(int(msg_id), None)
+            fut = self._pending.pop(msg_id, None)
             if fut is None or fut.done():
                 return
             if "error" in msg:
@@ -272,7 +292,7 @@ class AcpClient:
 
         # 2) Inbound request from the server (has id AND method).
         if msg_id is not None and method is not None:
-            await self._handle_server_request(int(msg_id), str(method), msg.get("params") or {})
+            await self._handle_server_request(msg_id, str(method), msg.get("params") or {})
             return
 
         # 3) Notification (method, no id).
@@ -289,7 +309,9 @@ class AcpClient:
             if handler is not None:
                 await handler(update)
 
-    async def _handle_server_request(self, request_id: int, method: str, params: JsonObj) -> None:
+    async def _handle_server_request(
+        self, request_id: int | str, method: str, params: JsonObj
+    ) -> None:
         if self._request_handler is not None:
             result: JsonObj = {}
             with contextlib.suppress(Exception):

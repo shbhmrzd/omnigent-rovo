@@ -1,5 +1,30 @@
 # Releasing omnigent-rovo
 
+## Release validation gate
+
+Before bumping the version or creating a GitHub release:
+
+1. Install the checkout with `uv pip install -e ".[dev]"`.
+2. Run `python -m pytest -q`, `ruff check .`, and `ruff format --check .`.
+3. Run the opt-in live evaluations with an authenticated Rovo CLI:
+   `RUN_ROVO_LIVE_EVALS=1 python -m pytest tests/test_live_rovo.py -v`.
+   Use the current Omnigent version for the HTTP/session-events evaluation.
+4. Build with `uv build`, run `python scripts/check_dist.py dist`, and
+   install the wheel into a separate virtual
+   environment containing Omnigent. From outside the checkout, run
+   `python /absolute/path/to/omnigent-rovo/scripts/check_install.py`.
+5. Confirm the supported minimum Omnigent version (0.4.0) and the current version
+   pass the deterministic suite. CI covers both on Python 3.12 and 3.13.
+6. Run `omni run --harness rovo -p "Reply with OK. Do not use tools."` and confirm
+   the terminal receives the answer. ACP-only success is insufficient to certify
+   the full application startup path.
+7. Record tested versions, results, and migration notes. Only then bump the
+   package version, rebuild, and publish that exact artifact.
+
+The publish workflow runs CI before uploading. Live evaluations remain an
+explicit pre-release step because they require credentials and model usage.
+A GitHub release triggers publication; do not create one with unresolved failures.
+
 ## First-time setup
 
 1. **Create a PyPI account** at https://pypi.org/account/register/
@@ -22,8 +47,8 @@ uv pip install build twine
 python -m build
 
 # This creates:
-#   dist/omnigent_rovo-0.1.0-py3-none-any.whl
-#   dist/omnigent_rovo-0.1.0.tar.gz
+#   dist/omnigent_rovo-0.2.0-py3-none-any.whl
+#   dist/omnigent_rovo-0.2.0.tar.gz
 
 # Upload to Test PyPI first (recommended for first release)
 twine upload --repository testpypi dist/*

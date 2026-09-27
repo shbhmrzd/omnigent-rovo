@@ -5,6 +5,15 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from omnigent.inner.executor import (
+    ExecutorError,
+    ReasoningChunk,
+    TextChunk,
+    ToolCallComplete,
+    ToolCallRequest,
+    ToolCallStatus,
+    TurnComplete,
+)
 
 from omnigent.community.harness.rovo.inner.rovo_executor import (
     RovoExecutor,
@@ -15,15 +24,6 @@ from omnigent.community.harness.rovo.inner.rovo_executor import (
     _session_key,
     _to_acp_prompt,
     _translate_update,
-)
-from tests.conftest import (
-    ExecutorError,
-    ReasoningChunk,
-    TextChunk,
-    ToolCallComplete,
-    ToolCallRequest,
-    ToolCallStatus,
-    TurnComplete,
 )
 
 # ---------------------------------------------------------------------------
@@ -279,7 +279,7 @@ class TestRovoExecutorCapabilities:
 class TestRovoExecutorCommand:
     def test_command_uses_defaults(self) -> None:
         ex = RovoExecutor()
-        assert ex._command() == ["acli", "rovodev", "acp"]
+        assert ex._command() == ["rovo", "acp"]
 
     def test_command_uses_custom_acli_path(self) -> None:
         ex = RovoExecutor(acli_path="/opt/acli")

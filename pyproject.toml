@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omnigent-rovo"
-version = "0.1.0"
+version = "0.2.0"
 description = "Rovo Dev harness plugin for Omnigent — drives Atlassian Rovo Dev via its ACP server."
 readme = "README.md"
 license = "MIT"
@@ -42,6 +42,12 @@ rovo = "omnigent.community.harness.rovo.plugin:get_contribution"
 
 [tool.hatch.build.targets.wheel]
 packages = ["omnigent"]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "omnigent/community/harness/rovo", "tests", "scripts",
+    "README.md", "CHANGELOG.md", "RELEASING.md", "LICENSE", "pyproject.toml",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

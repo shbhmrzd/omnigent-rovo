@@ -26,7 +26,7 @@ from omnigent.community.harness.rovo.inner.rovo_acp import (
 class TestDefaultAcpCommand:
     def test_bare_defaults(self) -> None:
         cmd = default_acp_command()
-        assert cmd == ["acli", "rovodev", "acp"]
+        assert cmd == ["rovo", "acp"]
 
     def test_custom_acli_path(self) -> None:
         cmd = default_acp_command(acli_path="/usr/local/bin/acli")

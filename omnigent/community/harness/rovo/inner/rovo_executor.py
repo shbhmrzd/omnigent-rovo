@@ -1,4 +1,4 @@
-"""RovoExecutor: run agents through Rovo Dev's ACP server (``acli rovodev acp``).
+"""RovoExecutor: run agents through Rovo Dev's ACP server (``rovo acp``).
 
 This is the per-harness "translator" in Omnigent's harness architecture. The
 shared :class:`~omnigent.runtime.harnesses._executor_adapter.ExecutorAdapter`
@@ -8,7 +8,7 @@ drives any :class:`~omnigent.inner.executor.Executor`; this subclass implements
 ``session/update`` notifications into Omnigent
 :class:`~omnigent.inner.executor.ExecutorEvent` instances.
 
-Event mapping (confirmed against ``acli rovodev acp`` over stdio):
+Event mapping (confirmed against ``rovo acp`` over stdio):
 
 ==============================  ===============================================
 ACP ``update.sessionUpdate``    Omnigent event
@@ -114,6 +114,7 @@ class _RovoSession:
         self.available_models: list[str] = []
         self.current_model_id: str | None = None
         self.cwd: str | None = None
+        self.stderr_tail = ""
         self._lock = asyncio.Lock()
 
     async def ensure(
@@ -122,19 +123,30 @@ class _RovoSession:
         command: list[str],
         env: dict[str, str] | None,
         cwd: str,
+        startup_timeout: float = 120.0,
     ) -> None:
         """Start the ACP client and open a session if not already done."""
         async with self._lock:
             if self.client is not None and self.session_id is not None:
                 return
             client = AcpClient(command=command, env=env, cwd=cwd)
-            await client.start()
-            await client.initialize()
-            result = await client.session_new(cwd=cwd)
-            session_id = result.get("sessionId")
-            if not session_id:
+            try:
+                async with asyncio.timeout(startup_timeout):
+                    await client.start()
+                    await client.initialize()
+                    result = await client.session_new(cwd=cwd)
+                session_id = result.get("sessionId")
+                if not session_id:
+                    raise AcpError("session/new did not return a sessionId")
+            except BaseException as exc:
                 await client.close()
-                raise AcpError("session/new did not return a sessionId")
+                self.stderr_tail = client.stderr_tail
+                if isinstance(exc, TimeoutError):
+                    raise TimeoutError(
+                        f"Rovo ACP startup exceeded {startup_timeout:g}s. Check Rovo's MCP "
+                        "server configuration or increase HARNESS_ROVO_STARTUP_TIMEOUT."
+                    ) from exc
+                raise
             self.client = client
             self.session_id = str(session_id)
             self.cwd = cwd
@@ -167,7 +179,7 @@ class _RovoSession:
 
 
 class RovoExecutor(Executor):
-    """Drive Rovo Dev via its ACP server (``acli rovodev acp``).
+    """Drive Rovo Dev via its ACP server (``rovo acp``).
 
     One ACP subprocess/session is kept warm per Omnigent conversation and
     reused across turns. Rovo runs its own agent loop and tools, so this
@@ -179,19 +191,25 @@ class RovoExecutor(Executor):
         *,
         cwd: str | None = None,
         model: str | None = None,
+        rovo_path: str | None = None,
         acli_path: str | None = None,
         config_file: str | None = None,
         site_url: str | None = None,
         env: dict[str, str] | None = None,
         turn_timeout: float = _DEFAULT_TURN_TIMEOUT_SECONDS,
+        startup_timeout: float = 120.0,
     ) -> None:
         self._cwd = cwd
         self._model_override = model
+        self._rovo_path = rovo_path
         self._acli_path = acli_path
         self._config_file = config_file
         self._site_url = site_url
         self._env = env
         self._turn_timeout = turn_timeout
+        if startup_timeout <= 0:
+            raise ValueError("startup_timeout must be positive")
+        self._startup_timeout = startup_timeout
         self._sessions: dict[str, _RovoSession] = {}
 
     # -- capability flags ---------------------------------------------------
@@ -238,6 +256,7 @@ class RovoExecutor(Executor):
 
     def _command(self) -> list[str]:
         return default_acp_command(
+            rovo_path=self._rovo_path,
             acli_path=self._acli_path,
             config_file=self._config_file,
             site_url=self._site_url,
@@ -255,9 +274,18 @@ class RovoExecutor(Executor):
         state = self._sessions.setdefault(session_key, _RovoSession())
         effective_cwd = self._cwd or os.getcwd()
         model = cfg.model or self._model_override
+        child_env = dict(os.environ if self._env is None else self._env)
+        # Updates can prompt or consume the entire handshake deadline. Upgrade
+        # the CLI explicitly outside a headless ACP session instead.
+        child_env.setdefault("ROVO_UPGRADE_MODE", "off")
 
         try:
-            await state.ensure(command=self._command(), env=self._env, cwd=effective_cwd)
+            await state.ensure(
+                command=self._command(),
+                env=child_env,
+                cwd=effective_cwd,
+                startup_timeout=self._startup_timeout,
+            )
             if model:
                 await state.set_model(model)
         except Exception as exc:  # noqa: BLE001
@@ -289,13 +317,7 @@ class RovoExecutor(Executor):
             )
         )
 
-        async def _await_prompt() -> None:
-            try:
-                await prompt_task
-            finally:
-                await queue.put(None)
-
-        finisher = asyncio.create_task(_await_prompt())
+        prompt_task.add_done_callback(lambda _: queue.put_nowait(None))
 
         final_text_parts: list[str] = []
         try:
@@ -312,16 +334,14 @@ class RovoExecutor(Executor):
                 usage=None,
             )
             logger.debug("rovo: turn complete stop_reason=%s", stop_reason)
-        except asyncio.CancelledError:
-            await state.client.session_cancel(state.session_id)
-            raise
         except Exception as exc:  # noqa: BLE001
+            await state.close()
             yield ExecutorError(message=f"Rovo executor error: {exc}")
         finally:
-            if not finisher.done():
-                finisher.cancel()
-                with contextlib.suppress(asyncio.CancelledError, Exception):
-                    await finisher
+            if not prompt_task.done():
+                prompt_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await prompt_task
 
 
 def _is_first_turn(messages: list[Message]) -> bool:
@@ -330,12 +350,13 @@ def _is_first_turn(messages: list[Message]) -> bool:
 
 
 def _boot_error_message(exc: Exception, state: _RovoSession) -> str:
-    tail = ""
+    tail = state.stderr_tail
     if state.client is not None:
         tail = state.client.stderr_tail
     base = (
-        "Failed to start Rovo Dev ACP session. Ensure `acli` is installed and "
-        "you are logged in (`acli rovodev auth login`)."
+        "Failed to start Rovo Dev ACP session. Ensure `rovo` is installed and "
+        "you are logged in (`rovo auth login`). For HARNESS_ROVO_ACLI_PATH, "
+        "use `acli rovodev auth login`."
     )
     detail = f"{type(exc).__name__}: {exc}"
     return f"{base}\n{detail}" + (f"\n{tail}" if tail else "")
