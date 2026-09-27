@@ -29,11 +29,11 @@ class TestGetContribution:
     def test_install_spec_present(self) -> None:
         contrib = get_contribution()
         spec = contrib.install_specs["rovo"]
-        assert spec.binary == "acli"
-        assert "acli" in spec.install_hint
-        assert spec.login_args == ("rovodev", "auth", "login")
-        assert spec.logout_args == ("rovodev", "auth", "logout")
-        assert spec.status_args == ("rovodev", "auth", "status")
+        assert spec.binary == "rovo"
+        assert "rovo" in spec.install_hint
+        assert spec.login_args == ("auth", "login")
+        assert spec.logout_args == ("auth", "logout")
+        assert spec.status_args == ("auth", "status")
 
     def test_model_env_key(self) -> None:
         contrib = get_contribution()

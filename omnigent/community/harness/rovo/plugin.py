@@ -38,18 +38,18 @@ def get_contribution() -> HarnessContribution:
         native_agents=(),
         install_specs={
             "rovo": HarnessInstallSpec(
-                display="Rovo Dev (acli)",
-                binary="acli",
-                package=None,  # acli is installed outside pip
+                display="Rovo (ACP)",
+                binary="rovo",
+                package=None,  # rovo is installed outside pip
                 install_hint=(
-                    "Install the Atlassian CLI (acli) from "
-                    "https://developer.atlassian.com/cloud/acli/ "
-                    "then run: acli rovodev auth login"
+                    "Install the Rovo CLI with ACP support, "
+                    "then run: rovo auth login. "
+                    "For older installations, set HARNESS_ROVO_ACLI_PATH to acli."
                 ),
-                login_args=("rovodev", "auth", "login"),
-                logout_args=("rovodev", "auth", "logout"),
-                status_args=("rovodev", "auth", "status"),
-                auth_hint="Run `acli rovodev auth login` to authenticate.",
+                login_args=("auth", "login"),
+                logout_args=("auth", "logout"),
+                status_args=("auth", "status"),
+                auth_hint="Run `rovo auth login` to authenticate.",
             ),
         },
         harness_install_keys={"rovo-cli": "rovo"},

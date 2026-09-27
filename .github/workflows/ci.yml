@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_call:
   push:
     branches: [main]
   pull_request:
@@ -23,6 +24,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
+        omnigent: ["omnigent==0.4.0", "omnigent"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,6 +32,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[dev]" "${{ matrix.omnigent }}" build
       - name: Run tests
         run: pytest -v
+      - name: Build and verify wheel installation
+        run: |
+          python -m build
+          python scripts/check_dist.py dist
+          pip install --force-reinstall --no-deps dist/*.whl
+          cd "${RUNNER_TEMP}"
+          python "${GITHUB_WORKSPACE}/scripts/check_install.py"
