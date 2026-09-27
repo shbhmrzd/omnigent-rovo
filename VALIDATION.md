@@ -93,3 +93,13 @@ and authentication/configuration path change. Users retaining acli should set
 `HARNESS_ROVO_ACLI_PATH=acli`. See RELEASING.md for the release gate. These are
 integration/correctness evaluations, not broad model-quality or performance
 benchmarks; no throughput or latency improvement is claimed.
+
+## Versioned 0.2.0 artifact check
+
+The exact 0.2.0 wheel passed installed-plugin discovery/health and the live HTTP
+streaming evaluation on Omnigent 0.15.0. The first coding evaluation hit its
+120-second test deadline before editing the fixture. One unchanged retry passed
+in 43.34 seconds, including independent correctness assertions and session memory.
+No implementation or test timeout was changed to obtain that result. Live Rovo
+service latency can vary; deterministic coverage and remote CI remain separate
+release gates.
