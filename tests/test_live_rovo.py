@@ -72,7 +72,9 @@ async def test_live_coding_and_session_memory(tmp_path):
             followup = [e async for e in executor.run_turn(messages, [], "")]
             assert not [e for e in followup if isinstance(e, ExecutorError)], followup
             assert isinstance(followup[-1], TurnComplete)
-            assert (followup[-1].response or "").strip() == marker
+            # Rovo may append a follow-up question from its system instructions.
+            # Still require the unpredictable marker intact on its own line.
+            assert marker in (followup[-1].response or "").splitlines()
             assert state.session_id == session_id
             assert state.client._proc is proc
     finally:
@@ -87,6 +89,7 @@ async def test_live_harness_http(tmp_path):
 
     import httpx
 
+    marker = "ROVO_HTTP_" + secrets.token_hex(6)
     with tempfile.TemporaryDirectory(prefix="rovo-http-", dir="/tmp") as runtime:
         socket_path = runtime + "/h.sock"
         proc = await asyncio.create_subprocess_exec(
@@ -127,7 +130,7 @@ async def test_live_harness_http(tmp_path):
                         "type": "message",
                         "role": "user",
                         "model": "rovo",
-                        "content": "Reply with exactly ROVO_HTTP_OK. Do not use tools.",
+                        "content": f"Reply with exactly {marker}. Do not use tools.",
                     },
                 )
                 assert response.status_code == 200, response.text
@@ -141,7 +144,7 @@ async def test_live_harness_http(tmp_path):
                     for p in payloads
                     if p.get("type") == "response.output_text.delta"
                 )
-                assert text.strip() == "ROVO_HTTP_OK", response.text
+                assert marker in text.splitlines(), response.text
                 assert any(p.get("type") == "response.completed" for p in payloads)
                 assert not [p for p in payloads if p.get("type") in {"error", "response.failed"}]
         finally:

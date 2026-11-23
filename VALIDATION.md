@@ -103,3 +103,49 @@ in 43.34 seconds, including independent correctness assertions and session memor
 No implementation or test timeout was changed to obtain that result. Live Rovo
 service latency can vary; deterministic coverage and remote CI remain separate
 release gates.
+
+## Compatibility recheck — 2026-11-23
+
+The published `omnigent-rovo==0.2.0` wheel still works with Omnigent 0.23.0
+and Rovo CLI 202611.19.1. Its Python source matches the checkout. These checks
+used macOS arm64 and Python 3.12.13 in a separate temporary environment.
+
+| Check | Result |
+| --- | --- |
+| Deterministic suite with the existing Omnigent 0.9.0 environment | 109 passed, 2 live evals skipped |
+| Deterministic suite with Omnigent 0.23.0 | 109 passed, 2 live evals skipped |
+| Published wheel installation, plugin discovery, and HTTP health | Passed |
+| Live coding, independent correctness assertions, session memory/process reuse | Passed |
+| Live Omnigent harness HTTP/SSE response and completion | Passed |
+| Full `omni run --harness rovo --server local -p ...` | Returned the requested random marker, exit 0 |
+| Ruff lint, formatting, and whitespace checks | Passed |
+
+The initial live run failed both exact-response assertions: Rovo returned the
+correct marker followed by a question such as "What would you like to do next?"
+The coding fixture was correctly edited and the HTTP stream completed without
+an error. Rovo's current system instructions request a follow-up question, so
+these failures reflected response style rather than a broken transport.
+
+The live checks now require the exact marker on its own line while allowing
+surrounding text. The HTTP marker is also randomized per run. Independent file
+assertions, process/session reuse, completion, and error checks are unchanged.
+Both revised live evaluations passed together in 76.77 seconds. The terminal
+check used isolated Omnigent data/config directories and its test daemon/server
+were stopped afterward. Rovo's normal configuration was used without edits.
+
+No runtime change or package version bump is needed based on these checks.
+Only the live evaluation assertions and this record changed. The machine's
+normal `omni` installation was separately found to contain Omnigent 0.15.0 and
+plugin 0.1.0, still selecting `acli rovodev acp`; it was not upgraded as part of
+this check. Upgrade that local installation to use the already published 0.2.0
+launcher migration. The repo's release branch is already pushed and its code
+matches remote main; publication and CI for v0.2.0 succeeded.
+
+### Local installation upgrade
+
+After the compatibility check, the normal `uv tool` installation was upgraded
+to Omnigent 0.23.0 and plugin 0.2.0 on Python 3.13.18. Plugin discovery, HTTP
+health, and the default `rovo acp` command were verified from outside the
+checkout. The upgraded `~/.local/bin/omni` also completed a live terminal prompt
+and returned its random response marker with exit 0. This verification used
+isolated data/config directories; its test daemon and server were stopped.
